@@ -274,23 +274,25 @@ def read_squad_examples(input_file, is_training):
             start_position = char_to_word_offset[answer_offset]
             try:
               end_position = char_to_word_offset[answer_offset + answer_length - 1]
+              # Only add answers where the text can be exactly recovered from the
+              # document. If this CAN'T happen it's likely due to weird Unicode
+              # stuff so we will just skip the example.
+              #
+              # Note that this means for training mode, every example is NOT
+              # guaranteed to be preserved.
+              actual_text = " ".join(
+                  doc_tokens[start_position:(end_position + 1)])
+              cleaned_answer_text = " ".join(
+                  tokenization.whitespace_tokenize(orig_answer_text))
+              if actual_text.find(cleaned_answer_text) == -1:
+                tf.logging.warning("Could not find answer: '%s' vs. '%s'",
+                                  actual_text, cleaned_answer_text)
+                continue
             except:
               tf.logging.warning("Could not get end Position: '%s', '%s'",
                                  answer, orig_answer_text)
-            # Only add answers where the text can be exactly recovered from the
-            # document. If this CAN'T happen it's likely due to weird Unicode
-            # stuff so we will just skip the example.
-            #
-            # Note that this means for training mode, every example is NOT
-            # guaranteed to be preserved.
-            actual_text = " ".join(
-                doc_tokens[start_position:(end_position + 1)])
-            cleaned_answer_text = " ".join(
-                tokenization.whitespace_tokenize(orig_answer_text))
-            if actual_text.find(cleaned_answer_text) == -1:
-              tf.logging.warning("Could not find answer: '%s' vs. '%s'",
-                                 actual_text, cleaned_answer_text)
               continue
+
           else:
             start_position = -1
             end_position = -1
